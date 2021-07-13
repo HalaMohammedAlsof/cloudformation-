@@ -1,0 +1,139 @@
+# 1. create VPC
+Resources:
+  myVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock: 172.31.0.0/16
+      Tags:
+        - Key: Name
+          Value: InternetGateway      
+# 2. create subnet
+  PublicSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: 
+        Ref: myVPC
+      AvailabilityZone: us-east-1a
+      CidrBlock: 172.31.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: PublicSubnet1        
+# 3. create internet gateway
+  InternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: InternetGateway
+  GatewayToInternet:
+        Type: 'AWS::EC2::VPCGatewayAttachment'
+        Properties:
+          VpcId:
+            Ref: myVPC
+          InternetGatewayId:
+            Ref: InternetGateway        
+# 4. Create custom routetable
+  PublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId:
+        Ref: myVPC
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable
+  PublicRoute:
+    Type: "AWS::EC2::Route"
+    DependsOn: GatewayToInternet
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+# 5. Associate subnet with route table
+  PublicSubnet1RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+# 6. security group 1 to allw port 22 and port 80
+  SecurityGroup1:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: "myVPC"
+    Properties:
+      GroupDescription: SSH and HTTP
+      VpcId:
+        Ref: myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SecurityGroup1
+  SecurityGroup2:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: "myVPC"
+    Properties:
+      GroupDescription: SSH and HTTP
+      VpcId:
+        Ref: myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: SecurityGroup2  
+# 7. create Amazon two ES2 and install httpd server
+  MyInstance1:
+    Type: AWS::EC2::Instance
+    Properties:
+     ImageId: ami-009d6802948d06e52 
+     InstanceType: t2.micro
+     SubnetId:
+       Ref: PublicSubnet1
+     UserData:
+       Fn::Base64: |
+        #!/bin/bash -xe
+        yum update -y
+        yum install httpd -y
+        systemctl start httpd
+        systemctl enable httpd
+        echo "Hello world MyInstance1 " > /var/www/html/index.html
+     SecurityGroupIds:
+       - !Ref SecurityGroup1
+     Tags:
+        - Key: Name
+          Value: MyInstance1    
+  MyInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+     ImageId: ami-009d6802948d06e52 
+     InstanceType: t2.micro
+     SubnetId:
+       Ref: PublicSubnet1
+     UserData:
+       Fn::Base64: |
+        #!/bin/bash -xe
+        yum update -y
+        yum install httpd -y
+        systemctl start httpd
+        systemctl enable httpd
+        echo "Hello world MyInstance2 " > /var/www/html/index.html
+     SecurityGroupIds:
+       - !Ref SecurityGroup2
+     Tags:
+        - Key: Name
+          Value: MyInstance2 

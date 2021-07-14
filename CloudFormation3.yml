@@ -4,6 +4,8 @@ Resources:
     Type: "AWS::EC2::VPC"
     Properties:
       CidrBlock: 172.31.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
       Tags:
         - Key: Name
           Value: InternetGateway      
@@ -111,7 +113,7 @@ Resources:
         yum install httpd -y
         systemctl start httpd
         systemctl enable httpd
-        echo "Hello world MyInstance1 " > /var/www/html/index.html
+        echo "Welcome to Hala CloudFormation Demo MyInstance1" > /var/www/html/index.html
      SecurityGroupIds:
        - !Ref SecurityGroup1
      Tags:
@@ -124,16 +126,23 @@ Resources:
      InstanceType: t2.micro
      SubnetId:
        Ref: PublicSubnet1
-     UserData:
+     Usk
        Fn::Base64: |
         #!/bin/bash -xe
         yum update -y
         yum install httpd -y
         systemctl start httpd
         systemctl enable httpd
-        echo "Hello world MyInstance2 " > /var/www/html/index.html
+        echo "Welcome to Hala CloudFormation Demo MyInstance2" > /var/www/html/index.html
      SecurityGroupIds:
-       - !Ref SecurityGroup2
+       - !Ref SecurityGroup2   
      Tags:
         - Key: Name
           Value: MyInstance2 
+Outputs: 
+  WebServerURL:
+    Value: !Join ["", ["http://", !GetAtt MyInstance1.PublicDnsName, ":80"]]
+    Description: URL for the apache web server1        
+  WebServerURL2:
+    Value: !Join ["", ["http://", !GetAtt MyInstance2.PublicDnsName, ":80"]]
+    Description: URL for the apache web server2       
